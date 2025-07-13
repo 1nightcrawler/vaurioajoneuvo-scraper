@@ -44,6 +44,22 @@ def load_config():
         print(Fore.RED + f"[ERROR] Failed to load config: {e}" + Style.RESET_ALL)
         return {}
 
+def send_telegram_message(text: str):
+    config = load_config()
+    token = config.get("telegram_token")
+    chat_id = config.get("telegram_chat_id")
+    if not token or not chat_id:
+        return  # Telegram is not configured
+    try:
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        payload = {"chat_id": chat_id, "text": text}
+        response = requests.post(url, json=payload, timeout=10)
+        if not response.ok:
+            print(Fore.RED + f"[ERROR] Telegram send failed: {response.text}" + Style.RESET_ALL)
+    except Exception as e:
+        print(Fore.RED + f"[ERROR] Telegram exception: {e}" + Style.RESET_ALL)
+
+
 def parse_interval(interval_str):
     """
     Parse interval string. Supports:
@@ -106,7 +122,9 @@ def parse_price(price_str: str) -> int:
     Convert a price string like '2 200 €' to an integer 2200.
     Removes euro sign, spaces, and converts to int.
     """
-    return int(price_str.replace("€", "").replace(" ", "").strip())
+    cleaned = price_str.replace("€", "").replace("\xa0", "").replace(" ", "").replace(",", "").strip()
+    return int(float(cleaned))
+
 
 def fetch_product_data(url: str):
     """
@@ -196,16 +214,28 @@ def watch_loop():
     """
     Main loop to periodically check all products' prices.
     Uses interval from config/CLI/default, supports random intervals.
+    Loads product list once to avoid unnecessary disk I/O.
     """
     is_random, interval_val = get_interval_from_args_or_config()
+
     print_divider()
     if is_random and isinstance(interval_val, tuple):
         min_iv, max_iv = interval_val
-        print(Fore.MAGENTA + Style.BRIGHT + f"Watching prices... Random interval: {min_iv}-{max_iv}s. Press Ctrl+C to stop." + Style.RESET_ALL)
+        print(Fore.MAGENTA + Style.BRIGHT +
+              f"Watching prices... Random interval: {min_iv}-{max_iv}s. Press Ctrl+C to stop." +
+              Style.RESET_ALL)
     else:
-        print(Fore.MAGENTA + Style.BRIGHT + f"Watching prices... Interval: {interval_val}s. Press Ctrl+C to stop." + Style.RESET_ALL)
+        print(Fore.MAGENTA + Style.BRIGHT +
+              f"Watching prices... Interval: {interval_val}s. Press Ctrl+C to stop." +
+              Style.RESET_ALL)
+
+    products = load_products()
+    if not products:
+        print(Fore.YELLOW + "No products found. Exiting watch mode." + Style.RESET_ALL)
+        return
+
     while True:
-        products = load_products()
+        print_divider()
         for item in products:
             url = item["url"]
             target = item["target_price"]
@@ -214,18 +244,27 @@ def watch_loop():
                 price = data["price"]
                 name = item.get("name", data["name"])
                 if price <= target:
-                    print(Fore.GREEN + Style.BRIGHT + f"[ALERT] {name}: {price} € (target {target} €)" + Style.RESET_ALL)
+                    print(Fore.GREEN + Style.BRIGHT +
+                          f"[ALERT] {name}: {price} € (target {target} €)" +
+                          Style.RESET_ALL)
+                    send_telegram_message(f"💸 {name} is now {price} € (target was {target} €)!\n{url}")
                 else:
-                    print(Fore.CYAN + f"{name}: {price} € (target {target} €)" + Style.RESET_ALL)
+                    print(Fore.CYAN +
+                          f"{name}: {price} € (target {target} €)" +
+                          Style.RESET_ALL)
             except Exception as e:
-                print(Fore.YELLOW + f"[WARNING] {item.get('name', item['url'])} - {e}" + Style.RESET_ALL)
+                print(Fore.YELLOW +
+                      f"[WARNING] {item.get('name', item['url'])} - {e}" +
+                      Style.RESET_ALL)
+
         if is_random and isinstance(interval_val, tuple):
             sleep_time = random.randint(min_iv, max_iv)
         else:
-            # interval_val is not a tuple here
             sleep_time = int(interval_val) if not isinstance(interval_val, tuple) else 1
+
         print(Fore.BLUE + f"[INFO] Waiting {sleep_time} seconds before next check..." + Style.RESET_ALL)
         time.sleep(sleep_time)
+
 
 def remove_product():
     products = load_products()
