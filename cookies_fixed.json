@@ -1,0 +1,47 @@
+[
+  {
+    "name": "_ga",
+    "value": "GA1.2.1602846997.1752116120",
+    "domain": "vaurioajoneuvo.fi",
+    "path": "/",
+    "secure": false,
+    "httpOnly": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_gat",
+    "value": "1",
+    "domain": "vaurioajoneuvo.fi",
+    "path": "/",
+    "secure": false,
+    "httpOnly": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "_gid",
+    "value": "GA1.2.1964029637.1752116120",
+    "domain": "vaurioajoneuvo.fi",
+    "path": "/",
+    "secure": false,
+    "httpOnly": false,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "svt-buyers",
+    "value": "38ab65d7cd148deae54c04781089887d49d397d2",
+    "domain": "www.vaurioajoneuvo.fi",
+    "path": "/",
+    "secure": true,
+    "httpOnly": true,
+    "sameSite": "Lax"
+  },
+  {
+    "name": "CookieConsent",
+    "value": "{stamp:%27aFG/OpAvOdmWVBsSwnu5pWKZq6Knu51KoEdWLsL7fHENuDcH/2lJaQ==%27%2Cnecessary:true%2Cpreferences:false%2Cstatistics:false%2Cmarketing:false%2Cmethod:%27explicit%27%2Cver:1%2Cutc:1752116126835%2Cregion:%27ee%27}",
+    "domain": "www.vaurioajoneuvo.fi",
+    "path": "/",
+    "secure": true,
+    "httpOnly": false,
+    "sameSite": "Lax"
+  }
+]

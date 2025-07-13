@@ -1,0 +1,15 @@
+{
+  "headers": {
+    "User-Agent": "your user-agent here",
+    "Accept-Language": "en-US,en;q=0.9",
+    "Referer": "https://www.vaurioajoneuvo.fi/"
+  },
+  "cookies": {
+    "cf_clearance": "your cf_clearance token here",
+    "_ga": "your _ga",
+    "_gid": "your _gid",
+    "_gat": "1",
+    "svt-buyers": "your session value",
+    "CookieConsent": "your cookie consent string"
+  }
+}

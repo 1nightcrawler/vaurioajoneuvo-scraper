@@ -1,0 +1,72 @@
+[
+{
+    "domain": ".vaurioajoneuvo.fi",
+    "expirationDate": 1786676120.384657,
+    "hostOnly": false,
+    "httpOnly": false,
+    "name": "_ga",
+    "path": "/",
+    "sameSite": "unspecified",
+    "secure": false,
+    "session": false,
+    "storeId": "1",
+    "value": "GA1.2.1602846997.1752116120",
+    "id": 1
+},
+{
+    "domain": ".vaurioajoneuvo.fi",
+    "expirationDate": 1752116180,
+    "hostOnly": false,
+    "httpOnly": false,
+    "name": "_gat",
+    "path": "/",
+    "sameSite": "unspecified",
+    "secure": false,
+    "session": false,
+    "storeId": "1",
+    "value": "1",
+    "id": 2
+},
+{
+    "domain": ".vaurioajoneuvo.fi",
+    "expirationDate": 1752202520,
+    "hostOnly": false,
+    "httpOnly": false,
+    "name": "_gid",
+    "path": "/",
+    "sameSite": "unspecified",
+    "secure": false,
+    "session": false,
+    "storeId": "1",
+    "value": "GA1.2.1964029637.1752116120",
+    "id": 3
+},
+{
+    "domain": ".www.vaurioajoneuvo.fi",
+    "expirationDate": 1786676120.709799,
+    "hostOnly": false,
+    "httpOnly": true,
+    "name": "svt-buyers",
+    "path": "/",
+    "sameSite": "unspecified",
+    "secure": true,
+    "session": false,
+    "storeId": "1",
+    "value": "38ab65d7cd148deae54c04781089887d49d397d2",
+    "id": 4
+},
+{
+    "domain": "www.vaurioajoneuvo.fi",
+    "expirationDate": 1783652126,
+    "hostOnly": true,
+    "httpOnly": false,
+    "name": "CookieConsent",
+    "path": "/",
+    "sameSite": "unspecified",
+    "secure": true,
+    "session": false,
+    "storeId": "1",
+    "value": "{stamp:%27aFG/OpAvOdmWVBsSwnu5pWKZq6Knu51KoEdWLsL7fHENuDcH/2lJaQ==%27%2Cnecessary:true%2Cpreferences:false%2Cstatistics:false%2Cmarketing:false%2Cmethod:%27explicit%27%2Cver:1%2Cutc:1752116126835%2Cregion:%27ee%27}",
+    "id": 5
+}
+]
