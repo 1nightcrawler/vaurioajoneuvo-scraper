@@ -114,9 +114,9 @@ Make sure it's accessible at `http://localhost:8191`.
 ```json
 [
   {
-    "url": "https://www.vaurioajoneuvo.fi/tuote/example-car/",
+    "url": "https://www.vaurioajoneuvo.fi/tuote/example/",
     "target_price": 3500,
-    "name": "Example Car"
+    "name": "Example"
   }
 ]
 ```
