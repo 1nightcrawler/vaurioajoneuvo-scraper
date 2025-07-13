@@ -1,9 +1,29 @@
-# Python venv
-.venv/
-
-# Bytecode
+# Python
 __pycache__/
+*.py[cod]
+*.pyo
+*.pyd
 *.pyc
+.Python
+env/
+.venv/
+venv/
+ENV/
+*.env
+*.egg-info/
+dist/
+build/
 
-# Personal or runtime files
-last_price.txt
+# IDEs/editors
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Project-specific
+products.json
+config.json
+chrome-profile/
