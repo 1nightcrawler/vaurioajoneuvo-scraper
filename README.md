@@ -3,18 +3,17 @@
 
 A price checker/scraper for [vaurioajoneuvo.fi](https://www.vaurioajoneuvo.fi), including a simple text-based UI and Telegram notifications for price drops.
 
----
+Currently it notifies the user, when the products price is under the target price.
+
 
 ## Features
 
 - Bypasses Cloudflare protection using [FlareSolverr](https://github.com/FlareSolverr/FlareSolverr)
 - Watchlist-based price tracking
 - Set fixed or random polling intervals
-- Clean terminal UI for adding/removing/editing products
+- Terminal user interface for adding/removing/editing products and polling intervals
 - Sends Telegram alerts when prices drop below your target
-- Cross-platform (Windows, Linux, macOS)
-
----
+- Should work on Windows, Linux and macOS
 
 ## Setup
 
@@ -47,7 +46,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
----
+
 
 ## Running the Program
 
@@ -63,11 +62,11 @@ python watcher.py
 python watcher.py watch
 ```
 
----
+
 
 ## Configuration
 
-### `config.json` (optional)
+### `config.json`
 
 You can create a `config.json` file in the project root to override defaults:
 
@@ -82,7 +81,7 @@ You can create a `config.json` file in the project root to override defaults:
 * `interval`: seconds (e.g. `"300"`), minutes (`"5m"`), or random (`"random:60-300"`)
 * `telegram_token` and `telegram_chat_id`: to enable Telegram alerts
 
----
+
 
 ## FlareSolverr
 
@@ -99,16 +98,16 @@ docker run -d \
 
 Make sure it's accessible at `http://localhost:8191`.
 
----
+
 
 ## Files
 
 * `watcher.py`: main script
 * `products.json`: product watchlist (auto-created)
-* `config.json`: config for polling interval and Telegram
+* `config.json`: config for polling interval and Telegram (included by default)
 * `requirements.txt`: dependencies
 
----
+
 
 ## Example `products.json`
 
@@ -122,17 +121,14 @@ Make sure it's accessible at `http://localhost:8191`.
 ]
 ```
 
-Add, remove, or edit products via the TUI — no manual edits required.
-
----
+Adding, removing and editing products can be done through the TUI. 
+Manual editing is also possible by modifying the `products.json` file.
 
 ## To-Do
 
 * [ ] Add browser fallback for manual solving
 * [ ] Export results
 * [ ] Auto-retry failed requests
-
----
 
 ## Cleaning Up
 
@@ -142,22 +138,13 @@ To regenerate `requirements.txt` with only used libraries:
 pip freeze > requirements.txt
 ```
 
-Or use a tool like [`pipreqs`](https://github.com/bndr/pipreqs):
-
-```bash
-pip install pipreqs
-pipreqs .
-```
-
----
-
 ## License
 
 MIT License — use freely, credit appreciated.
 
----
+
 
 ## Author
 
-Created by \[Marti] · [@1nightcrawler]([https://github.com/yourhandle](https://github.com/1nightcrawler))
+Created by [@1nightcrawler]([https://github.com/yourhandle](https://github.com/1nightcrawler))
 
