@@ -104,7 +104,7 @@ Make sure it's accessible at `http://localhost:8191`.
 
 * `watcher.py`: main script
 * `products.json`: product watchlist (auto-created)
-* `config.json`: config for polling interval and Telegram (included by default)
+* `config.json`: config for polling interval and Telegram
 * `requirements.txt`: dependencies
 
 
