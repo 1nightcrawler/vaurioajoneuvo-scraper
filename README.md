@@ -20,7 +20,7 @@ Currently it notifies the user, when the products price is under the target pric
 ### 1. Clone the repository
 
 ```bash
-git clone https://github.com/yourusername/vaurioajoneuvo-scraper.git
+git clone https://github.com/1nightcrawler/vaurioajoneuvo-scraper.git
 cd vaurioajoneuvo-scraper
 ````
 
