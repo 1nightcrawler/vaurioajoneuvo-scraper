@@ -40,3 +40,4 @@ logs/
 *.log
 *.log.*
 logging_config_old.py
+logging_config_clean.py
