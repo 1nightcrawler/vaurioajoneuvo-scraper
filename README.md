@@ -81,6 +81,37 @@ You can create a `config.json` file in the project root to override defaults:
 * `interval`: seconds (e.g. `"300"`), minutes (`"5m"`), or random (`"random:60-300"`)
 * `telegram_token` and `telegram_chat_id`: to enable Telegram alerts
 
+### How to Get Your Telegram Chat ID
+
+To receive Telegram notifications, you'll need:
+
+- A **Telegram Bot Token** (from [@BotFather](https://t.me/BotFather))
+- Your **Chat ID**
+
+The bot token will be given to you by [@BotFather](https://t.me/BotFather)
+
+#### Steps to get your chat ID:
+
+1. **Start a conversation with your bot**:
+   - Go to Telegram and search for your bot using the name you set with BotFather.
+   - Send any message (e.g., "Hello").
+
+2. **Get your Chat ID using this link**:
+  ```https://api.telegram.org/bot<YOUR_BOT_TOKEN>/getUpdates```
+  - Replace `<YOUR_BOT_TOKEN>` with your actual token.
+
+3. **Look for this in the JSON response**:
+  ```json
+  {
+    "message": {
+      "chat": {
+        "id": 123456789,
+        ...
+      }
+    }
+  }
+  ```
+  - The id field is your telegram_chat_id.
 
 
 ## FlareSolverr
