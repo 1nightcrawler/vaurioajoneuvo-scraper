@@ -1,12 +1,106 @@
-<!-- app/templates/index.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Valvur</title>
+  <meta charset="UTF-8" />
+  <title>Valvur - Price Watch</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+  <script defer src="{{ url_for('static', filename='dashboard.js') }}"></script>
 </head>
 <body>
-    <h1>Valvur is online!</h1>
-    <p>Welcome to your price watcher web interface.</p>
+  <h1>Valvur Dashboard</h1>
+  <nav class="tab-bar">
+    <button class="tab-btn active" data-tab="products">Products</button>
+    <button class="tab-btn" data-tab="settings">Settings</button>
+  </nav>
+  <section id="dashboard">
+    <div id="tab-products" class="tab-content active">
+      <div class="dashboard-section">
+        <div class="section-header">
+          <h2>Watched Products</h2>
+          <div class="status-indicators">
+            <div id="main-watcher-status" class="watcher-status-indicator">
+              <span class="status-dot"></span>
+              <span class="status-text">Loading...</span>
+            </div>
+            <div id="auto-refresh-countdown" class="auto-refresh-indicator" style="display: none;">
+              Auto-refresh in: --
+            </div>
+          </div>
+        </div>
+        <ul id="product-list" class="product-list"></ul>
+        <div class="add-product-container">
+          <div class="add-product-header">
+            <h3>Add New Product</h3>
+            <p>Start monitoring a new product for price changes</p>
+          </div>
+          <form id="add-product-form" class="add-product-form">
+            <div class="form-row">
+              <div class="input-group">
+                <label for="product-url">Product URL</label>
+                <input type="url" name="url" id="product-url" placeholder="https://www.vaurioajoneuvo.fi/tuote/..." required />
+              </div>
+              <div class="input-group">
+                <label for="target-price">Target Price (€)</label>
+                <input type="number" name="target_price" id="target-price" placeholder="1500" required min="0" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="input-group">
+                <label for="product-name">Name (Optional)</label>
+                <input type="text" name="name" id="product-name" placeholder="Give it a memorable name..." />
+              </div>
+              <button type="submit" class="add-btn">
+                <span class="btn-icon">+</span>
+                <span class="btn-text">Add Product</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+    <div id="tab-settings" class="tab-content">
+      <div class="dashboard-section">
+        <h2>Price Watcher Control</h2>
+        <div id="watcher-status" class="current-value">Loading watcher status...</div>
+        <div class="form-row" style="margin-top: 1rem;">
+          <button id="start-watcher-btn" type="button" class="watcher-btn start-btn">Start Watcher</button>
+          <button id="stop-watcher-btn" type="button" class="watcher-btn stop-btn">Stop Watcher</button>
+        </div>
+      </div>
+      <div class="dashboard-section">
+        <h2>Polling Interval</h2>
+        <form id="interval-form" class="card-form">
+          <input type="text" name="interval" id="interval-input" placeholder="e.g. 60, 2m, random:60-300" required />
+          <button type="submit">Update Interval</button>
+        </form>
+        <div id="interval-current" class="current-value"></div>
+      </div>
+      <div class="dashboard-section">
+        <h2>Telegram Settings</h2>
+        <form id="telegram-form" class="card-form">
+          <input type="text" name="token" id="telegram-token" placeholder="Bot Token" required />
+          <input type="text" name="chat_id" id="telegram-chat-id" placeholder="Chat ID" required />
+          <button type="submit">Update Telegram</button>
+        </form>
+        <div id="telegram-current" class="current-value"></div>
+      </div>
+    </div>
+  </section>
+  <template id="product-item-template">
+    <li class="product-card">
+      <div class="product-info">
+        <strong class="product-name"></strong>
+        <div class="product-meta">
+          <span class="product-target"></span>
+          <span class="product-last"></span>
+        </div>
+        <a class="product-link" href="#" target="_blank">View Listing</a>
+      </div>
+      <div class="product-actions">
+        <button class="edit-btn" title="Edit Product">Edit</button>
+        <button class="delete-btn" title="Remove Product">Remove</button>
+      </div>
+    </li>
+  </template>
 </body>
 </html>
