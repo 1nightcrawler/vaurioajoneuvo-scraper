@@ -5,25 +5,30 @@ __pycache__/
 *.pyd
 *.pyc
 .Python
-env/
-.venv/
-venv/
-ENV/
-*.env
 *.egg-info/
 dist/
 build/
 
-# IDEs/editors
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+
+# Environment / Secrets
+*.env
+config.json
+products.json
+session.json
+
+# Editor/IDE
 .vscode/
 .idea/
 
-# OS
+# OS-generated files
 .DS_Store
 Thumbs.db
 desktop.ini
 
 # Project-specific
-products.json
-config.json
 chrome-profile/
