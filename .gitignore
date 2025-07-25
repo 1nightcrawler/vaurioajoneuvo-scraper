@@ -17,6 +17,8 @@ ENV/
 
 # Environment / Secrets
 *.env
+.env.local
+.env.production
 config.json
 products.json
 session.json
@@ -32,3 +34,9 @@ desktop.ini
 
 # Project-specific
 chrome-profile/
+
+# Logs and runtime data
+logs/
+*.log
+*.log.*
+logging_config_old.py

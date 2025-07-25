@@ -5,12 +5,14 @@ import threading
 import time
 import json
 import requests
+import logging
 from bs4 import BeautifulSoup
+from .logging_config import log_watcher_event
 
 # Add watcher directory to path so we can import from it
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', 'watcher'))
 
-FLARESOLVERR_URL = "http://localhost:8191/v1"
+FLARESOLVERR_URL = os.environ.get('FLARESOLVERR_URL', 'http://localhost:8191/v1')
 
 class WatcherService:
     def __init__(self):
@@ -20,25 +22,30 @@ class WatcherService:
         self.next_check_time = None
         self.current_interval = None
         self.flaresolverr_session = None
+        self.logger = logging.getLogger('watcher')
         
     def start(self):
         """Start the watcher service in a background thread"""
         if self.is_running:
+            self.logger.warning("Attempted to start watcher that's already running")
             return False, "Watcher is already running"
             
         self.stop_event.clear()
         self.watcher_thread = threading.Thread(target=self._watch_loop, daemon=True)
         self.watcher_thread.start()
         self.is_running = True
+        self.logger.info("Watcher service started successfully")
         return True, "Watcher started successfully"
         
     def stop(self):
         """Stop the watcher service"""
         if not self.is_running:
+            self.logger.warning("Attempted to stop watcher that's not running")
             return False, "Watcher is not running"
             
         self.stop_event.set()
         self.is_running = False
+        self.logger.info("Watcher service stopped")
         return True, "Watcher stopped successfully"
         
     def status(self):
@@ -76,9 +83,15 @@ class WatcherService:
     
     def _send_telegram_message(self, text: str):
         """Send a Telegram message"""
-        config = self._load_config()
-        token = config.get("telegram_token")
-        chat_id = config.get("telegram_chat_id")
+        # Get credentials from environment variables first, fallback to config
+        token = os.environ.get('TELEGRAM_TOKEN')
+        chat_id = os.environ.get('TELEGRAM_CHAT_ID')
+        
+        # Fallback to config file if env vars not set
+        if not token or not chat_id:
+            config = self._load_config()
+            token = token or config.get("telegram_token")
+            chat_id = chat_id or config.get("telegram_chat_id")
         
         if not token or not chat_id:
             return  # Telegram is not configured
@@ -191,8 +204,8 @@ class WatcherService:
             return 60  # Default to 60 seconds
     
     def _watch_loop(self):
-        """Main watcher loop"""
-        print("[INFO] Watcher service started")
+        """Main watcher loop with enhanced logging"""
+        self.logger.info("Watcher service started")
         
         while not self.stop_event.is_set():
             try:
@@ -200,11 +213,14 @@ class WatcherService:
                 products = self._load_products()
                 
                 if not products:
-                    print("[INFO] No products to watch")
+                    self.logger.info("No products to watch, sleeping...")
                     time.sleep(30)
                     continue
                 
-                print(f"[INFO] Checking {len(products)} products...")
+                self.logger.info(f"Starting price check for {len(products)} products")
+                
+                alerts_sent = 0
+                errors_count = 0
                 
                 for item in products:
                     if self.stop_event.is_set():
@@ -212,22 +228,72 @@ class WatcherService:
                         
                     url = item["url"]
                     target = item["target_price"]
+                    product_name = item.get("name", "Unknown Product")
                     
                     try:
+                        start_time = time.time()
                         data = self._fetch_product_data(url)
+                        fetch_time = time.time() - start_time
+                        
                         price = data["price"]
                         name = item.get("name", data["name"])
                         
-                        if price < target:  # Changed from <= to < for "below" target
-                            print(f"[ALERT] {name}: {price} € (dropped below target {target} €)")
-                            self._send_telegram_message(
-                                f"PRICE ALERT: {name} has dropped to {price} € (below your target of {target} €)!\n{url}"
+                        log_watcher_event(
+                            self.logger,
+                            'price_check',
+                            product_url=url,
+                            target_price=target,
+                            current_price=price,
+                            details={
+                                'product_name': name,
+                                'fetch_time': fetch_time,
+                                'price_difference': price - target
+                            }
+                        )
+                        
+                        if price < target:  # Below target
+                            self.logger.info(f"ALERT: {name} dropped to €{price} (below target €{target})")
+                            log_watcher_event(
+                                self.logger,
+                                'price_alert',
+                                product_url=url,
+                                target_price=target,
+                                current_price=price,
+                                details={'product_name': name, 'alert_type': 'price_drop'}
                             )
+                            self._send_telegram_message(
+                                f"PRICE ALERT: {name} has dropped to €{price} (below your target of €{target})!\n{url}"
+                            )
+                            alerts_sent += 1
                         else:
-                            print(f"[INFO] {name}: {price} € (target {target} €)")
+                            self.logger.debug(f"Price check: {name} = €{price} (target: €{target})")
                             
                     except Exception as e:
-                        print(f"[WARNING] {item.get('name', item['url'])} - {e}")
+                        errors_count += 1
+                        self.logger.error(
+                            f"Error checking {product_name}: {str(e)}",
+                            extra={
+                                'product_url': url, 
+                                'target_price': target,
+                                'product_name': product_name
+                            },
+                            exc_info=True
+                        )
+                        log_watcher_event(
+                            self.logger,
+                            'price_check_error',
+                            product_url=url,
+                            target_price=target,
+                            details={
+                                'product_name': product_name,
+                                'error': str(e)
+                            }
+                        )
+                
+                self.logger.info(
+                    f"Price check completed: {len(products)} products checked, "
+                    f"{alerts_sent} alerts sent, {errors_count} errors"
+                )
                 
                 # Parse interval and wait
                 interval_str = config.get("interval", "60")
@@ -235,19 +301,19 @@ class WatcherService:
                 self.current_interval = interval_seconds
                 self.next_check_time = time.time() + interval_seconds
                 
-                print(f"[INFO] Waiting {interval_seconds} seconds until next check...")
+                self.logger.info(f"Next check in {interval_seconds} seconds")
                 
-                # Wait with ability to stop and countdown tracking
+                # Wait with ability to stop
                 for i in range(interval_seconds):
                     if self.stop_event.is_set():
                         break
                     time.sleep(1)
                     
             except Exception as e:
-                print(f"[ERROR] Watcher loop error: {e}")
+                self.logger.error(f"Watcher loop error: {str(e)}", exc_info=True)
                 time.sleep(30)  # Wait 30 seconds before retrying
         
-        print("[INFO] Watcher service stopped")
+        self.logger.info("Watcher service stopped")
 
 # Global watcher instance
 watcher_service = WatcherService()

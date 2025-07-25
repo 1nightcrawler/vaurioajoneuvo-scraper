@@ -1,17 +1,22 @@
 # app/routes.py
 import json
-from flask import Blueprint, render_template, request, jsonify
 import os
 import requests
+from flask import Blueprint, render_template, request, jsonify, redirect, url_for, flash
+from flask_login import login_required, login_user, logout_user, current_user
 from bs4 import BeautifulSoup
 from .watcher_service import watcher_service
+from .auth import User
+from .validators import is_valid_url, is_valid_price, is_valid_name, sanitize_string
+from . import limiter
 
 main = Blueprint("main", __name__)
 
 PRODUCTS_FILE = os.path.join(os.path.dirname(__file__), "../watcher/products.json")
 CONFIG_FILE = os.path.join(os.path.dirname(__file__), "../config.json")
 
-FLARESOLVERR_URL = "http://localhost:8191/v1"
+# Get FlareSolverr URL from environment
+FLARESOLVERR_URL = os.environ.get('FLARESOLVERR_URL', 'http://localhost:8191/v1')
 
 def load_products():
     with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
@@ -98,42 +103,127 @@ def parse_price(price_str):
     price = re.sub(r"[^0-9]", "", price_str)
     return int(price) if price else 0
 
+# --- Authentication routes ---
+@main.route("/login", methods=["GET", "POST"])
+@limiter.limit("10 per minute")
+def login():
+    if current_user.is_authenticated:
+        return redirect(url_for('main.index'))
+    
+    if request.method == "POST":
+        username = request.form.get('username', '').strip()
+        password = request.form.get('password', '')
+        
+        # Basic input validation
+        if not username or not password:
+            flash('Username and password are required.', 'error')
+            return render_template('login.html', error='Username and password are required.')
+        
+        # Authenticate user
+        user = User.authenticate(username, password)
+        if user:
+            login_user(user)
+            next_page = request.args.get('next')
+            return redirect(next_page) if next_page else redirect(url_for('main.index'))
+        else:
+            flash('Invalid username or password.', 'error')
+            return render_template('login.html', error='Invalid username or password.')
+    
+    return render_template('login.html')
+
+@main.route("/logout")
+@login_required
+def logout():
+    logout_user()
+    flash('You have been logged out.', 'info')
+    return redirect(url_for('main.login'))
+
 @main.route("/")
+@login_required
 def index():
     products = load_products()
     return render_template("index.html", products=products)
 
 # --- API endpoints ---
 @main.route("/api/products", methods=["GET"])
+@login_required
 def api_get_products():
     return jsonify(load_products())
 
 @main.route("/api/products", methods=["POST"])
+@login_required
+@limiter.limit("20 per minute")
 def api_add_product():
     data = request.json
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+    # Validate required fields
+    url = data.get("url", "").strip()
+    target_price = data.get("target_price")
+    name = sanitize_string(data.get("name", ""))
+    
+    if not is_valid_url(url):
+        return jsonify({"error": "Invalid URL format"}), 400
+    
+    if not is_valid_price(target_price):
+        return jsonify({"error": "Invalid target price"}), 400
+    
+    if name and not is_valid_name(name):
+        return jsonify({"error": "Invalid product name"}), 400
+    
     products = load_products()
-    # name is optional, can be empty string
+    
+    # Check for duplicate URLs
+    if any(p["url"] == url for p in products):
+        return jsonify({"error": "Product with this URL already exists"}), 400
+    
     products.append({
-        "url": data["url"],
-        "target_price": int(data["target_price"]),
-        "name": data.get("name", "")
+        "url": url,
+        "target_price": int(target_price),
+        "name": name
     })
     save_products(products)
     return jsonify({"success": True})
 
 @main.route("/api/products/<int:idx>", methods=["PUT"])
+@login_required
+@limiter.limit("20 per minute")
 def api_update_product(idx):
     data = request.json
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+    # Validate input
+    url = data.get("url", "").strip()
+    target_price = data.get("target_price")
+    name = sanitize_string(data.get("name", ""))
+    
+    if not is_valid_url(url):
+        return jsonify({"error": "Invalid URL format"}), 400
+    
+    if not is_valid_price(target_price):
+        return jsonify({"error": "Invalid target price"}), 400
+    
+    if name and not is_valid_name(name):
+        return jsonify({"error": "Invalid product name"}), 400
+    
     products = load_products()
     if 0 <= idx < len(products):
-        products[idx]["url"] = data["url"]
-        products[idx]["target_price"] = int(data["target_price"])
-        products[idx]["name"] = data.get("name", "")
+        # Check for duplicate URLs (excluding current product)
+        if any(i != idx and p["url"] == url for i, p in enumerate(products)):
+            return jsonify({"error": "Product with this URL already exists"}), 400
+            
+        products[idx]["url"] = url
+        products[idx]["target_price"] = int(target_price)
+        products[idx]["name"] = name
         save_products(products)
         return jsonify({"success": True})
     return jsonify({"error": "Invalid index"}), 400
 
 @main.route("/api/products/<int:idx>", methods=["DELETE"])
+@login_required
+@limiter.limit("30 per minute")
 def api_delete_product(idx):
     products = load_products()
     if 0 <= idx < len(products):
@@ -143,54 +233,89 @@ def api_delete_product(idx):
     return jsonify({"error": "Invalid index"}), 400
 
 @main.route("/api/interval", methods=["GET"])
+@login_required
 def api_get_interval():
     config = load_config()
     return jsonify({"interval": config.get("interval", "")})
 
 @main.route("/api/interval", methods=["PUT"])
+@login_required
+@limiter.limit("10 per minute")
 def api_set_interval():
     data = request.json
+    if not data or "interval" not in data:
+        return jsonify({"error": "Missing interval parameter"}), 400
+    
+    interval = sanitize_string(str(data["interval"]))
+    if len(interval) > 50:  # Reasonable limit
+        return jsonify({"error": "Interval string too long"}), 400
+    
     config = load_config()
-    config["interval"] = data["interval"]
+    config["interval"] = interval
     save_config(config)
     return jsonify({"success": True})
 
 @main.route("/api/telegram", methods=["GET"])
+@login_required
 def api_get_telegram():
-    config = load_config()
+    # Get from environment variables instead of config file for security
     return jsonify({
-        "telegram_token": config.get("telegram_token", ""),
-        "telegram_chat_id": config.get("telegram_chat_id", "")
+        "telegram_token": os.environ.get("TELEGRAM_TOKEN", ""),
+        "telegram_chat_id": os.environ.get("TELEGRAM_CHAT_ID", "")
     })
 
 @main.route("/api/telegram", methods=["PUT"])
+@login_required
+@limiter.limit("5 per minute")
 def api_set_telegram():
     data = request.json
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+    
+    # Note: In production, these should be set via environment variables
+    # This endpoint is kept for backward compatibility but discouraged
+    token = sanitize_string(data.get("token", ""))
+    chat_id = sanitize_string(data.get("chat_id", ""))
+    
     config = load_config()
-    config["telegram_token"] = data["token"]
-    config["telegram_chat_id"] = data["chat_id"]
+    config["telegram_token"] = token
+    config["telegram_chat_id"] = chat_id
     save_config(config)
-    return jsonify({"success": True})
+    return jsonify({"success": True, "warning": "Consider using environment variables for production"})
 
 @main.route("/api/price", methods=["POST"])
+@login_required
+@limiter.limit("10 per minute")  # More restrictive as this makes external requests
 def api_get_price():
     data = request.json
-    url = data.get("url")
-    if not url:
-        return jsonify({"error": "Missing URL"}), 400
-    result = fetch_product_data(url)
-    return jsonify(result)
+    if not data:
+        return jsonify({"error": "No data provided"}), 400
+        
+    url = data.get("url", "").strip()
+    if not is_valid_url(url):
+        return jsonify({"error": "Invalid URL format"}), 400
+        
+    try:
+        result = fetch_product_data(url)
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @main.route("/api/watcher/start", methods=["POST"])
+@login_required
+@limiter.limit("10 per minute")
 def api_start_watcher():
     success, message = watcher_service.start()
     return jsonify({"success": success, "message": message})
 
 @main.route("/api/watcher/stop", methods=["POST"])
+@login_required
+@limiter.limit("10 per minute")
 def api_stop_watcher():
     success, message = watcher_service.stop()
     return jsonify({"success": success, "message": message})
 
 @main.route("/api/watcher/status", methods=["GET"])
+@login_required
 def api_watcher_status():
     return jsonify(watcher_service.status())
