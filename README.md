@@ -39,6 +39,10 @@ python -m venv .venv
 python3 -m venv .venv
 source .venv/bin/activate
 ```
+for fish use
+```bash
+source .venv/bin/activate.fish
+```
 
 ### 3. Install dependencies
 
