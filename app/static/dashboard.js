@@ -2,30 +2,11 @@
 
 // Utility: fetch JSON
 async function fetchJSON(url, options = {}) {
-  console.log(`[fetchJSON] ${options.method || 'GET'} ${url}`, options.body ? JSON.parse(options.body) : '');
-  
   const res = await fetch(url, options);
-  
-  // First try to parse as JSON regardless of status code
-  let data;
-  try {
-    data = await res.json();
-    console.log(`[fetchJSON] Response:`, { status: res.status, data });
-  } catch (e) {
-    // If JSON parsing fails, get text for error message
-    const text = await res.text();
-    console.error(`[fetchJSON] Failed to parse JSON:`, { status: res.status, text });
-    throw new Error(`Request failed: ${res.status} ${res.statusText}. Response: ${text}`);
-  }
-  
-  // If response is not ok, check if we have an error message in the JSON
   if (!res.ok) {
-    const errorMessage = data.error || data.message || `Request failed: ${res.status} ${res.statusText}`;
-    console.error(`[fetchJSON] Request failed:`, { status: res.status, errorMessage, data });
-    throw new Error(errorMessage);
+    throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   }
-  
-  return data;
+  return res.json();
 }
 
 // Product management
@@ -40,44 +21,26 @@ async function refreshProducts() {
 }
 
 async function addProduct(product) {
-  const response = await fetchJSON('/api/products', {
+  await fetchJSON('/api/products', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(product)
   });
-  
-  // Check if the response indicates success
-  if (response.success !== true) {
-    throw new Error(response.error || response.message || 'Unknown error occurred');
-  }
-  
-  await refreshProducts(); // Changed from loadProducts to refreshProducts
+  await refreshProducts();
 }
 
 async function updateProduct(idx, product) {
-  const response = await fetchJSON(`/api/products/${idx}`, {
+  await fetchJSON(`/api/products/${idx}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(product)
   });
-  
-  // Check if the response indicates success
-  if (response.success !== true) {
-    throw new Error(response.error || response.message || 'Unknown error occurred');
-  }
-  
-  await refreshProducts(); // Changed from loadProducts to refreshProducts
+  await refreshProducts();
 }
 
 async function deleteProduct(idx) {
-  const response = await fetchJSON(`/api/products/${idx}`, { method: 'DELETE' });
-  
-  // Check if the response indicates success
-  if (response.success !== true) {
-    throw new Error(response.error || response.message || 'Unknown error occurred');
-  }
-  
-  await refreshProducts(); // Changed from loadProducts to refreshProducts
+  await fetchJSON(`/api/products/${idx}`, { method: 'DELETE' });
+  await refreshProducts();
 }
 
 // Interval management
@@ -87,17 +50,11 @@ async function loadInterval() {
 }
 
 async function updateInterval(interval) {
-  const response = await fetchJSON('/api/interval', {
+  await fetchJSON('/api/interval', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ interval })
   });
-  
-  // Check if the response indicates success
-  if (response.success !== true) {
-    throw new Error(response.error || response.message || 'Unknown error occurred');
-  }
-  
   await loadInterval();
 }
 
@@ -108,17 +65,11 @@ async function loadTelegram() {
 }
 
 async function updateTelegram(token, chat_id) {
-  const response = await fetchJSON('/api/telegram', {
+  await fetchJSON('/api/telegram', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token, chat_id })
   });
-  
-  // Check if the response indicates success
-  if (response.success !== true) {
-    throw new Error(response.error || response.message || 'Unknown error occurred');
-  }
-  
   await loadTelegram();
 }
 
@@ -530,13 +481,9 @@ document.addEventListener('DOMContentLoaded', () => {
     startWatcherBtn.disabled = true;
     
     try {
-      const response = await fetchJSON('/api/watcher/start', { method: 'POST' });
-      if (response.success) {
-        showNotification('Watcher started successfully!');
-        await renderWatcherStatus();
-      } else {
-        showNotification(response.message || 'Failed to start watcher', 'error');
-      }
+      await fetchJSON('/api/watcher/start', { method: 'POST' });
+      showNotification('Watcher started successfully!');
+      await renderWatcherStatus();
     } catch (error) {
       showNotification('Failed to start watcher', 'error');
     } finally {
@@ -551,13 +498,9 @@ document.addEventListener('DOMContentLoaded', () => {
     stopWatcherBtn.disabled = true;
     
     try {
-      const response = await fetchJSON('/api/watcher/stop', { method: 'POST' });
-      if (response.success) {
-        showNotification('Watcher stopped successfully!');
-        await renderWatcherStatus();
-      } else {
-        showNotification(response.message || 'Failed to stop watcher', 'error');
-      }
+      await fetchJSON('/api/watcher/stop', { method: 'POST' });
+      showNotification('Watcher stopped successfully!');
+      await renderWatcherStatus();
     } catch (error) {
       showNotification('Failed to stop watcher', 'error');
     } finally {
