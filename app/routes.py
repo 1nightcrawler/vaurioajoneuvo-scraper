@@ -363,3 +363,42 @@ def api_stop_watcher():
 @login_required
 def api_watcher_status():
     return jsonify(watcher_service.status())
+
+@main.route("/api/notifications", methods=["GET"])
+@login_required
+@limiter.limit("10 per minute")
+def api_get_notifications():
+    """Get notification settings"""
+    try:
+        config = load_config()
+        return jsonify({
+            "success": True,
+            "notification_mode": config.get("notification_mode", "below_target")
+        })
+    except Exception as e:
+        return jsonify({"error": f"Failed to load notification settings: {str(e)}"}), 500
+
+@main.route("/api/notifications", methods=["PUT"])
+@login_required
+@limiter.limit("5 per minute")
+def api_set_notifications():
+    """Update notification settings"""
+    try:
+        data = request.json
+        if not data:
+            return jsonify({"error": "No data provided"}), 400
+            
+        mode = data.get("notification_mode", "").strip()
+        valid_modes = ["any_change", "below_target", "both", "none"]
+        
+        if mode not in valid_modes:
+            return jsonify({"error": f"Invalid notification mode. Must be one of: {', '.join(valid_modes)}"}), 400
+        
+        config = load_config()
+        config["notification_mode"] = mode
+        save_config(config)
+        
+        return jsonify({"success": True, "message": "Notification settings updated"})
+        
+    except Exception as e:
+        return jsonify({"error": f"Failed to update notification settings: {str(e)}"}), 500

@@ -73,6 +73,21 @@ async function updateTelegram(token, chat_id) {
   await loadTelegram();
 }
 
+// Notification settings
+async function loadNotifications() {
+  const data = await fetchJSON('/api/notifications');
+  return data;
+}
+
+async function updateNotifications(mode) {
+  await fetchJSON('/api/notifications', {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ notification_mode: mode })
+  });
+  await loadNotifications();
+}
+
 document.addEventListener('DOMContentLoaded', () => {
   // Tab switching
   const tabBtns = document.querySelectorAll('.tab-btn');
@@ -96,6 +111,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const telegramToken = document.getElementById('telegram-token');
   const telegramChatId = document.getElementById('telegram-chat-id');
   const telegramCurrent = document.getElementById('telegram-current');
+  const notificationsForm = document.getElementById('notifications-form');
+  const notificationsCurrent = document.getElementById('notifications-current');
   const productTemplate = document.getElementById('product-item-template');
   const watcherStatus = document.getElementById('watcher-status');
   const startWatcherBtn = document.getElementById('start-watcher-btn');
@@ -412,6 +429,36 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  // Notification settings with better feedback
+  async function renderNotifications() {
+    try {
+      const data = await fetchJSON('/api/notifications');
+      const modeDescriptions = {
+        'below_target': 'Only when price drops below target',
+        'any_change': 'On any price change (up or down)',
+        'both': 'Both price changes and below target alerts',
+        'none': 'Never (monitoring only, no notifications)'
+      };
+      
+      const currentMode = data.notification_mode || 'below_target';
+      const description = modeDescriptions[currentMode] || 'Unknown mode';
+      
+      notificationsCurrent.innerHTML = `
+        <div><strong>Current mode:</strong> ${description}</div>
+        <div class="mode-info">
+          ${currentMode === 'any_change' ? '📈 You\'ll get notified of all price movements' : ''}
+          ${currentMode === 'below_target' ? '🎯 You\'ll only get target price alerts' : ''}
+          ${currentMode === 'both' ? '📈🎯 You\'ll get all price changes AND target alerts' : ''}
+          ${currentMode === 'none' ? '🔇 No notifications (monitoring only)' : ''}
+        </div>
+      `;
+      
+      document.getElementById('notification-mode').value = currentMode;
+    } catch (error) {
+      notificationsCurrent.innerHTML = '<span class="error">Failed to load notification settings</span>';
+    }
+  }
+
   // Watcher control functions
   async function renderWatcherStatus() {
     try {
@@ -550,6 +597,25 @@ document.addEventListener('DOMContentLoaded', () => {
       this.value = '';
     }
   });
+
+  notificationsForm.onsubmit = async e => {
+    e.preventDefault();
+    const submitBtn = notificationsForm.querySelector('button[type="submit"]');
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Updating...';
+    
+    try {
+      const mode = document.getElementById('notification-mode').value;
+      await updateNotifications(mode);
+      await renderNotifications();
+      showNotification('Notification settings updated!');
+    } catch (error) {
+      showNotification('Failed to update notification settings', 'error');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'Update Notifications';
+    }
+  };
 
   // Add keyboard shortcuts
   document.addEventListener('keydown', (e) => {
@@ -702,6 +768,7 @@ document.addEventListener('DOMContentLoaded', () => {
   renderProducts();
   setTimeout(renderInterval, 100);
   setTimeout(renderTelegram, 200);
+  setTimeout(renderNotifications, 250);
   setTimeout(renderWatcherStatus, 300);
   
   // Setup auto-refresh after initial load

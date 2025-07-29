@@ -116,6 +116,21 @@
         </form>
         <div id="telegram-current" class="current-value"></div>
       </div>
+
+      <div class="dashboard-section">
+        <h2>Notification Settings</h2>
+        <form id="notifications-form" class="card-form">
+          <label for="notification-mode">When to send notifications:</label>
+          <select name="notification_mode" id="notification-mode" required>
+            <option value="below_target">Only when price drops below target</option>
+            <option value="any_change">On any price change</option>
+            <option value="both">Both (any change + below target)</option>
+            <option value="none">Never (monitoring only)</option>
+          </select>
+          <button type="submit">Update Notifications</button>
+        </form>
+        <div id="notifications-current" class="current-value"></div>
+      </div>
     </div>
   </section>
   <template id="product-item-template">

@@ -23,6 +23,7 @@ class WatcherService:
         self.current_interval = None
         self.flaresolverr_session = None
         self.logger = logging.getLogger('watcher')
+        self.price_history = {}  # Track previous prices for change detection
         
     def start(self):
         """Start the watcher service in a background thread"""
@@ -74,13 +75,14 @@ class WatcherService:
             default_config = {
                 "interval": "600",  # 10 minutes default
                 "telegram_token": "",
-                "telegram_chat_id": ""
+                "telegram_chat_id": "",
+                "notification_mode": "below_target"  # New setting
             }
             self._create_default_config(config_path, default_config)
             return default_config
         except Exception as e:
             self.logger.error(f"Error loading config: {e}")
-            return {"interval": "600"}  # Fallback
+            return {"interval": "600", "notification_mode": "below_target"}  # Fallback
     
     def _create_default_config(self, config_path, default_config):
         """Create default config.json file"""
@@ -295,6 +297,13 @@ class WatcherService:
                         price = data["price"]
                         name = item.get("name", data["name"])
                         
+                        # Get previous price for change detection
+                        previous_price = self.price_history.get(url, None)
+                        self.price_history[url] = price
+                        
+                        # Determine notification mode
+                        notification_mode = config.get("notification_mode", "below_target")
+                        
                         log_watcher_event(
                             self.logger,
                             'price_check',
@@ -304,26 +313,60 @@ class WatcherService:
                             details={
                                 'product_name': name,
                                 'fetch_time': fetch_time,
-                                'price_difference': price - target
+                                'price_difference': price - target,
+                                'previous_price': previous_price,
+                                'notification_mode': notification_mode
                             }
                         )
                         
-                        if price < target:  # Below target
-                            self.logger.info(f"ALERT: {name} dropped to €{price} (below target €{target})")
+                        # Check for notifications based on mode
+                        should_notify = False
+                        alert_message = ""
+                        
+                        if notification_mode == "any_change" and previous_price is not None and price != previous_price:
+                            # Notify on any price change
+                            change = price - previous_price
+                            direction = "increased" if change > 0 else "decreased"
+                            should_notify = True
+                            alert_message = f"💰 PRICE CHANGE: {name} {direction} from €{previous_price} to €{price} (target: €{target})\n{url}"
+                            
+                        elif notification_mode == "below_target" and price < target:
+                            # Notify only when below target (current behavior)
+                            should_notify = True
+                            alert_message = f"🎯 PRICE ALERT: {name} has dropped to €{price} (below your target of €{target})!\n{url}"
+                            
+                        elif notification_mode == "both":
+                            # Notify on any change OR below target
+                            if previous_price is not None and price != previous_price:
+                                change = price - previous_price
+                                direction = "increased" if change > 0 else "decreased"
+                                should_notify = True
+                                alert_message = f"💰 PRICE CHANGE: {name} {direction} from €{previous_price} to €{price} (target: €{target})\n{url}"
+                            elif price < target:
+                                should_notify = True
+                                alert_message = f"🎯 PRICE ALERT: {name} has dropped to €{price} (below your target of €{target})!\n{url}"
+                        
+                        # notification_mode == "none" means no notifications
+                        
+                        if should_notify:
+                            self.logger.info(f"ALERT: {alert_message.split(':', 1)[1].split(chr(10))[0].strip()}")
                             log_watcher_event(
                                 self.logger,
                                 'price_alert',
                                 product_url=url,
                                 target_price=target,
                                 current_price=price,
-                                details={'product_name': name, 'alert_type': 'price_drop'}
+                                details={
+                                    'product_name': name, 
+                                    'alert_type': 'price_change' if 'CHANGE' in alert_message else 'price_drop',
+                                    'previous_price': previous_price,
+                                    'notification_mode': notification_mode
+                                }
                             )
-                            self._send_telegram_message(
-                                f"PRICE ALERT: {name} has dropped to €{price} (below your target of €{target})!\n{url}"
-                            )
+                            self._send_telegram_message(alert_message)
                             alerts_sent += 1
                         else:
-                            self.logger.debug(f"Price check: {name} = €{price} (target: €{target})")
+                            self.logger.debug(f"Price check: {name} = €{price} (target: €{target}, previous: €{previous_price})")
                             
                     except Exception as e:
                         errors_count += 1
