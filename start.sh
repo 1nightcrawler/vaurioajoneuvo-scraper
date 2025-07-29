@@ -1,39 +1,15 @@
 #!/bin/bash
 # Production startup script for Vaurioajoneuvo Price Scraper
 
-# Get the directory where the script is located
-SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-cd "$SCRIPT_DIR"
-
 # Activate virtual environment if it exists
 if [ -d ".venv" ]; then
-    echo "🔧 Activating virtual environment..."
     source .venv/bin/activate
 elif [ -d "venv" ]; then
-    echo "🔧 Activating virtual environment..."
     source venv/bin/activate
-elif [ -d "env" ]; then
-    echo "🔧 Activating virtual environment..."
-    source env/bin/activate
-else
-    echo "⚠️  No virtual environment found. Using system Python."
-fi
-
-# Check if gunicorn is available
-if ! command -v gunicorn &> /dev/null; then
-    echo "❌ Gunicorn not found. Installing dependencies..."
-    pip install -r requirements.txt
 fi
 
 # Load environment variables
-if [ -f ".env" ]; then
-    echo "🔧 Loading environment variables..."
-    export $(grep -v '^#' .env | xargs)
-else
-    echo "⚠️  .env file not found. Using default settings."
-fi
-
-echo "🚀 Starting Valvur application..."
+export $(grep -v '^#' .env | xargs)
 
 # Start the application with Gunicorn
 exec gunicorn \
