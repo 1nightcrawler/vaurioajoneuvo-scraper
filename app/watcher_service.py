@@ -247,6 +247,18 @@ class WatcherService:
                 
         except Exception:
             return 60  # Default to 60 seconds
+        
+    def _cleanup_sessions(self):
+        """Clean up crashed FlareSolverr sessions"""
+        try:
+            # Destroy all sessions
+            payload = {"cmd": "sessions.destroy", "session": "vaurioajoneuvo_watcher"}
+            requests.post(FLARESOLVERR_URL, json=payload, timeout=10)
+            payload = {"cmd": "sessions.destroy", "session": "vaurioajoneuvo_api"}  
+            requests.post(FLARESOLVERR_URL, json=payload, timeout=10)
+            self.flaresolverr_session = None
+        except:
+            pass
     
     def _watch_loop(self):
         """Main watcher loop with enhanced logging"""
