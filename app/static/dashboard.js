@@ -2,21 +2,26 @@
 
 // Utility: fetch JSON
 async function fetchJSON(url, options = {}) {
+  console.log(`[fetchJSON] ${options.method || 'GET'} ${url}`, options.body ? JSON.parse(options.body) : '');
+  
   const res = await fetch(url, options);
   
   // First try to parse as JSON regardless of status code
   let data;
   try {
     data = await res.json();
+    console.log(`[fetchJSON] Response:`, { status: res.status, data });
   } catch (e) {
     // If JSON parsing fails, get text for error message
     const text = await res.text();
+    console.error(`[fetchJSON] Failed to parse JSON:`, { status: res.status, text });
     throw new Error(`Request failed: ${res.status} ${res.statusText}. Response: ${text}`);
   }
   
   // If response is not ok, check if we have an error message in the JSON
   if (!res.ok) {
     const errorMessage = data.error || data.message || `Request failed: ${res.status} ${res.statusText}`;
+    console.error(`[fetchJSON] Request failed:`, { status: res.status, errorMessage, data });
     throw new Error(errorMessage);
   }
   
@@ -35,25 +40,43 @@ async function refreshProducts() {
 }
 
 async function addProduct(product) {
-  await fetchJSON('/api/products', {
+  const response = await fetchJSON('/api/products', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(product)
   });
+  
+  // Check if the response indicates success
+  if (response.success !== true) {
+    throw new Error(response.error || response.message || 'Unknown error occurred');
+  }
+  
   await refreshProducts(); // Changed from loadProducts to refreshProducts
 }
 
 async function updateProduct(idx, product) {
-  await fetchJSON(`/api/products/${idx}`, {
+  const response = await fetchJSON(`/api/products/${idx}`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(product)
   });
+  
+  // Check if the response indicates success
+  if (response.success !== true) {
+    throw new Error(response.error || response.message || 'Unknown error occurred');
+  }
+  
   await refreshProducts(); // Changed from loadProducts to refreshProducts
 }
 
 async function deleteProduct(idx) {
-  await fetchJSON(`/api/products/${idx}`, { method: 'DELETE' });
+  const response = await fetchJSON(`/api/products/${idx}`, { method: 'DELETE' });
+  
+  // Check if the response indicates success
+  if (response.success !== true) {
+    throw new Error(response.error || response.message || 'Unknown error occurred');
+  }
+  
   await refreshProducts(); // Changed from loadProducts to refreshProducts
 }
 
@@ -64,11 +87,17 @@ async function loadInterval() {
 }
 
 async function updateInterval(interval) {
-  await fetchJSON('/api/interval', {
+  const response = await fetchJSON('/api/interval', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ interval })
   });
+  
+  // Check if the response indicates success
+  if (response.success !== true) {
+    throw new Error(response.error || response.message || 'Unknown error occurred');
+  }
+  
   await loadInterval();
 }
 
@@ -79,11 +108,17 @@ async function loadTelegram() {
 }
 
 async function updateTelegram(token, chat_id) {
-  await fetchJSON('/api/telegram', {
+  const response = await fetchJSON('/api/telegram', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ token, chat_id })
   });
+  
+  // Check if the response indicates success
+  if (response.success !== true) {
+    throw new Error(response.error || response.message || 'Unknown error occurred');
+  }
+  
   await loadTelegram();
 }
 
