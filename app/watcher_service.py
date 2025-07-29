@@ -69,17 +69,62 @@ class WatcherService:
         try:
             with open(config_path, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
-            return {}
+        except FileNotFoundError:
+            # Create default config if it doesn't exist
+            default_config = {
+                "interval": "600",  # 10 minutes default
+                "telegram_token": "",
+                "telegram_chat_id": ""
+            }
+            self._create_default_config(config_path, default_config)
+            return default_config
+        except Exception as e:
+            self.logger.error(f"Error loading config: {e}")
+            return {"interval": "600"}  # Fallback
+    
+    def _create_default_config(self, config_path, default_config):
+        """Create default config.json file"""
+        try:
+            with open(config_path, "w", encoding="utf-8") as f:
+                json.dump(default_config, f, indent=2)
+            self.logger.info(f"Created default config file at {config_path}")
+        except Exception as e:
+            self.logger.error(f"Error creating default config: {e}")
     
     def _load_products(self):
         """Load products from products.json"""
         products_path = os.path.join(os.path.dirname(__file__), "..", "watcher", "products.json")
+        
+        # Ensure watcher directory exists
+        watcher_dir = os.path.dirname(products_path)
+        if not os.path.exists(watcher_dir):
+            try:
+                os.makedirs(watcher_dir, mode=0o755)
+                self.logger.info(f"Created watcher directory at {watcher_dir}")
+            except Exception as e:
+                self.logger.error(f"Error creating watcher directory: {e}")
+                return []
+        
         try:
             with open(products_path, "r", encoding="utf-8") as f:
                 return json.load(f)
-        except Exception:
+        except FileNotFoundError:
+            # Create empty products file if it doesn't exist
+            default_products = []
+            self._create_default_products(products_path, default_products)
+            return default_products
+        except Exception as e:
+            self.logger.error(f"Error loading products: {e}")
             return []
+    
+    def _create_default_products(self, products_path, default_products):
+        """Create default products.json file"""
+        try:
+            with open(products_path, "w", encoding="utf-8") as f:
+                json.dump(default_products, f, indent=2)
+            self.logger.info(f"Created default products file at {products_path}")
+        except Exception as e:
+            self.logger.error(f"Error creating default products file: {e}")
     
     def _send_telegram_message(self, text: str):
         """Send a Telegram message"""

@@ -19,20 +19,64 @@ CONFIG_FILE = os.path.join(os.path.dirname(__file__), "../config.json")
 FLARESOLVERR_URL = os.environ.get('FLARESOLVERR_URL', 'http://localhost:8191/v1')
 
 def load_products():
-    with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    """Load products, creating empty list if missing"""
+    try:
+        with open(PRODUCTS_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        # Create empty products file if it doesn't exist
+        default_products = []
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(PRODUCTS_FILE), exist_ok=True)
+        save_products(default_products)
+        return default_products
+    except Exception as e:
+        # Log error and return empty list
+        print(f"Error loading products: {e}")
+        return []
 
 def save_products(products):
-    with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
-        json.dump(products, f, indent=2, ensure_ascii=False)
+    """Save products to file"""
+    try:
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(PRODUCTS_FILE), exist_ok=True)
+        with open(PRODUCTS_FILE, "w", encoding="utf-8") as f:
+            json.dump(products, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"Error saving products: {e}")
+        raise
 
 def load_config():
-    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-        return json.load(f)
+    """Load configuration, creating default if missing"""
+    try:
+        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        # Create default config if it doesn't exist
+        default_config = {
+            "interval": "600",  # 10 minutes default
+            "telegram_token": "",
+            "telegram_chat_id": ""
+        }
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+        save_config(default_config)
+        return default_config
+    except Exception as e:
+        # Log error and return minimal config
+        print(f"Error loading config: {e}")
+        return {"interval": "600"}
 
 def save_config(config):
-    with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-        json.dump(config, f, indent=2, ensure_ascii=False)
+    """Save configuration to file"""
+    try:
+        # Ensure directory exists
+        os.makedirs(os.path.dirname(CONFIG_FILE), exist_ok=True)
+        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
+            json.dump(config, f, indent=2, ensure_ascii=False)
+    except Exception as e:
+        print(f"Error saving config: {e}")
+        raise
 
 # Global session for API requests
 api_flaresolverr_session = None
