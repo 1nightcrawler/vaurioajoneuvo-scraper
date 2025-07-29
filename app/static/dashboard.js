@@ -3,8 +3,24 @@
 // Utility: fetch JSON
 async function fetchJSON(url, options = {}) {
   const res = await fetch(url, options);
-  if (!res.ok) throw new Error(await res.text());
-  return res.json();
+  
+  // First try to parse as JSON regardless of status code
+  let data;
+  try {
+    data = await res.json();
+  } catch (e) {
+    // If JSON parsing fails, get text for error message
+    const text = await res.text();
+    throw new Error(`Request failed: ${res.status} ${res.statusText}. Response: ${text}`);
+  }
+  
+  // If response is not ok, check if we have an error message in the JSON
+  if (!res.ok) {
+    const errorMessage = data.error || data.message || `Request failed: ${res.status} ${res.statusText}`;
+    throw new Error(errorMessage);
+  }
+  
+  return data;
 }
 
 // Product management
