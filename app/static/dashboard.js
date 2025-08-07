@@ -431,8 +431,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Notification settings with better feedback
   async function renderNotifications() {
+    console.log('[renderNotifications] Starting function...'); // Debug log
+    
+    showLoading(notificationsCurrent, 'Loading notification settings...');
+    
     try {
+      console.log('[renderNotifications] Making API call to /api/notifications...'); // Debug log
       const data = await fetchJSON('/api/notifications');
+      console.log('[renderNotifications] API Response:', JSON.stringify(data, null, 2)); // Debug log
+      
       const modeDescriptions = {
         'below_target': 'Only when price drops below target',
         'any_change': 'On any price change (up or down)',
@@ -443,9 +450,19 @@ document.addEventListener('DOMContentLoaded', () => {
       const currentMode = data.notification_mode || 'below_target';
       const description = modeDescriptions[currentMode] || 'Unknown mode';
       
-      console.log('Notification data received:', data); // Debug log
-      console.log('Current mode:', currentMode); // Debug log
+      console.log('[renderNotifications] Current mode:', currentMode); // Debug log
+      console.log('[renderNotifications] Description:', description); // Debug log
       
+      // Ensure the element exists before updating
+      console.log('[renderNotifications] Checking for notificationsCurrent element...'); // Debug log
+      console.log('[renderNotifications] notificationsCurrent element:', notificationsCurrent); // Debug log
+      
+      if (!notificationsCurrent) {
+        console.error('[renderNotifications] notificationsCurrent element not found!');
+        return;
+      }
+      
+      console.log('[renderNotifications] Setting innerHTML...'); // Debug log
       notificationsCurrent.innerHTML = `
         <div><strong>Current mode:</strong> ${description}</div>
         <div class="mode-info" style="margin-top: 0.5rem; font-size: 0.9rem; color: #6b7280;">
@@ -455,11 +472,29 @@ document.addEventListener('DOMContentLoaded', () => {
           ${currentMode === 'none' ? 'No notifications (monitoring only)' : ''}
         </div>
       `;
+      console.log('[renderNotifications] innerHTML set successfully'); // Debug log
       
-      document.getElementById('notification-mode').value = currentMode;
+      // Set dropdown value
+      console.log('[renderNotifications] Setting dropdown value...'); // Debug log
+      const dropdown = document.getElementById('notification-mode');
+      console.log('[renderNotifications] Dropdown element:', dropdown); // Debug log
+      if (dropdown) {
+        dropdown.value = currentMode;
+        console.log('[renderNotifications] Dropdown value set to:', currentMode); // Debug log
+      } else {
+        console.error('[renderNotifications] notification-mode dropdown not found!');
+      }
+      
+      console.log('[renderNotifications] Function completed successfully'); // Debug log
     } catch (error) {
-      console.error('Failed to load notification settings:', error); // Debug log
-      notificationsCurrent.innerHTML = '<span class="error">Failed to load notification settings</span>';
+      console.error('[renderNotifications] Error occurred:', error); // Debug log
+      console.error('[renderNotifications] Error stack:', error.stack); // Debug log
+      if (notificationsCurrent) {
+        notificationsCurrent.innerHTML = `
+          <span class="error">Failed to load notification settings</span>
+          <div style="font-size: 0.8rem; color: #666; margin-top: 0.5rem;">Error: ${error.message}</div>
+        `;
+      }
     }
   }
 
@@ -772,7 +807,23 @@ document.addEventListener('DOMContentLoaded', () => {
   renderProducts();
   setTimeout(renderInterval, 100);
   setTimeout(renderTelegram, 200);
-  setTimeout(renderNotifications, 250);
+  setTimeout(() => {
+    console.log('[DOMContentLoaded] About to call renderNotifications...'); // Debug log
+    try {
+      renderNotifications();
+    } catch (error) {
+      console.error('[DOMContentLoaded] Error calling renderNotifications:', error);
+      // Fallback display if function fails
+      if (notificationsCurrent) {
+        notificationsCurrent.innerHTML = `
+          <div><strong>Current mode:</strong> Only when price drops below target (default)</div>
+          <div class="mode-info" style="margin-top: 0.5rem; font-size: 0.9rem; color: #6b7280;">
+            You'll only get target price alerts
+          </div>
+        `;
+      }
+    }
+  }, 250);
   setTimeout(renderWatcherStatus, 300);
   
   // Setup auto-refresh after initial load
