@@ -1,8 +1,17 @@
 // Dashboard interactivity for product, interval, and Telegram settings management
 
-// Utility: fetch JSON
+// Utility: fetch JSON with rate limit handling
 async function fetchJSON(url, options = {}) {
   const res = await fetch(url, options);
+  if (res.status === 429) {
+    console.warn(`[fetchJSON] Rate limited on ${url}, retrying in 2s...`);
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    const retryRes = await fetch(url, options);
+    if (!retryRes.ok) {
+      throw new Error(`HTTP ${retryRes.status}: ${retryRes.statusText}`);
+    }
+    return retryRes.json();
+  }
   if (!res.ok) {
     throw new Error(`HTTP ${res.status}: ${res.statusText}`);
   }
@@ -803,12 +812,19 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  // Initial load with staggered timing for better UX
+  // Initial load with staggered timing for better UX and rate limiting
+  console.log('[DOMContentLoaded] Starting initial load sequence...');
   renderProducts();
-  setTimeout(renderInterval, 100);
-  setTimeout(renderTelegram, 200);
   setTimeout(() => {
-    console.log('[DOMContentLoaded] About to call renderNotifications...'); // Debug log
+    console.log('[DOMContentLoaded] Loading interval...');
+    renderInterval();
+  }, 1000); // Increased delay
+  setTimeout(() => {
+    console.log('[DOMContentLoaded] Loading telegram...');
+    renderTelegram();
+  }, 2000); // Increased delay
+  setTimeout(() => {
+    console.log('[DOMContentLoaded] About to call renderNotifications...');
     try {
       renderNotifications();
     } catch (error) {
@@ -823,16 +839,23 @@ document.addEventListener('DOMContentLoaded', () => {
         `;
       }
     }
-  }, 250);
-  setTimeout(renderWatcherStatus, 300);
+  }, 3000); // Increased delay
+  setTimeout(() => {
+    console.log('[DOMContentLoaded] Loading watcher status...');
+    renderWatcherStatus();
+  }, 4000); // Increased delay
   
   // Setup auto-refresh after initial load
-  setTimeout(setupAutoRefresh, 500);
+  setTimeout(() => {
+    console.log('[DOMContentLoaded] Setting up auto-refresh...');
+    setupAutoRefresh();
+  }, 5000); // Wait 5 seconds before starting auto-refresh
   
-  // Auto-refresh watcher status every 5 seconds for countdown updates
+  // Auto-refresh watcher status every 30 seconds (reduced from 5 seconds to avoid rate limits)
   setInterval(() => {
     if (document.visibilityState === 'visible') {
+      console.log('[Auto-refresh] Refreshing watcher status...');
       renderWatcherStatus();
     }
-  }, 5 * 1000);
+  }, 30 * 1000); // Changed from 5 seconds to 30 seconds
 }); 
