@@ -446,10 +446,10 @@ document.addEventListener('DOMContentLoaded', () => {
       notificationsCurrent.innerHTML = `
         <div><strong>Current mode:</strong> ${description}</div>
         <div class="mode-info">
-          ${currentMode === 'any_change' ? '📈 You\'ll get notified of all price movements' : ''}
-          ${currentMode === 'below_target' ? '🎯 You\'ll only get target price alerts' : ''}
-          ${currentMode === 'both' ? '📈🎯 You\'ll get all price changes AND target alerts' : ''}
-          ${currentMode === 'none' ? '🔇 No notifications (monitoring only)' : ''}
+          ${currentMode === 'any_change' ? 'You\'ll get notified of all price movements' : ''}
+          ${currentMode === 'below_target' ? 'You\'ll only get target price alerts' : ''}
+          ${currentMode === 'both' ? 'You\'ll get all price changes AND target alerts' : ''}
+          ${currentMode === 'none' ? 'No notifications (monitoring only)' : ''}
         </div>
       `;
       
