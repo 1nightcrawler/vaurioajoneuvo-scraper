@@ -270,17 +270,7 @@ document.addEventListener('DOMContentLoaded', () => {
             });
             
             if (res.error) {
-              // Check if watcher is running to provide better error message
-              try {
-                const watcherStatus = await fetchJSON('/api/watcher/status');
-                if (!watcherStatus.is_running) {
-                  lastSpan.innerHTML = '<span class="error">⏸ Watcher turned off</span>';
-                } else {
-                  lastSpan.innerHTML = '<span class="error">✗ Unable to fetch</span>';
-                }
-              } catch {
-                lastSpan.innerHTML = '<span class="error">✗ Unable to fetch</span>';
-              }
+              lastSpan.innerHTML = '<span class="error">✗ Unable to fetch price</span>';
             } else {
               const currentPrice = res.price;
               const isBelowTarget = currentPrice < product.target_price;  // Changed from <= to <
@@ -298,17 +288,7 @@ document.addEventListener('DOMContentLoaded', () => {
               }
             }
           } catch (error) {
-            // Check if it's a connection issue or watcher is off
-            try {
-              const watcherStatus = await fetchJSON('/api/watcher/status');
-              if (!watcherStatus.is_running) {
-                lastSpan.innerHTML = '<span class="error">⏸ Watcher turned off</span>';
-              } else {
-                lastSpan.innerHTML = '<span class="error">✗ Connection failed</span>';
-              }
-            } catch {
-              lastSpan.innerHTML = '<span class="error">✗ Connection failed</span>';
-            }
+            lastSpan.innerHTML = '<span class="error">✗ Connection failed</span>';
           }
         }, idx * 1000); // Stagger price checks to avoid overwhelming FlareSolverr
       }
@@ -648,21 +628,45 @@ document.addEventListener('DOMContentLoaded', () => {
 
   notificationsForm.onsubmit = async e => {
     e.preventDefault();
+    e.stopPropagation();
+    console.log('[notificationsForm] Form submission started');
+    
     const submitBtn = notificationsForm.querySelector('button[type="submit"]');
+    const originalText = submitBtn.textContent;
+    
+    // Immediately disable button to prevent double-submission
     submitBtn.disabled = true;
-    submitBtn.textContent = 'Updating...';
+    submitBtn.textContent = '⏳ Updating...';
     
     try {
-      const mode = document.getElementById('notification-mode').value;
+      const modeDropdown = document.getElementById('notification-mode');
+      if (!modeDropdown) {
+        throw new Error('Notification mode dropdown not found');
+      }
+      
+      const mode = modeDropdown.value;
+      console.log('[notificationsForm] Selected mode:', mode);
+      
+      if (!mode) {
+        throw new Error('No notification mode selected');
+      }
+      
+      // Show immediate feedback
+      showNotification('Updating notification settings...', 'success');
+      
       await updateNotifications(mode);
       await renderNotifications();
-      showNotification('Notification settings updated!');
+      showNotification(`✓ Notification mode updated to: ${mode}!`);
+      console.log('[notificationsForm] Update successful');
     } catch (error) {
-      showNotification('Failed to update notification settings', 'error');
+      console.error('[notificationsForm] Update failed:', error);
+      showNotification(`❌ Failed to update: ${error.message}`, 'error');
     } finally {
       submitBtn.disabled = false;
-      submitBtn.textContent = 'Update Notifications';
+      submitBtn.textContent = originalText;
     }
+    
+    return false; // Extra safety to prevent form submission
   };
 
   // Add keyboard shortcuts
@@ -851,11 +855,11 @@ document.addEventListener('DOMContentLoaded', () => {
     setupAutoRefresh();
   }, 5000); // Wait 5 seconds before starting auto-refresh
   
-  // Auto-refresh watcher status every 30 seconds (reduced from 5 seconds to avoid rate limits)
+  // Auto-refresh watcher status every 2 minutes (much less aggressive)
   setInterval(() => {
     if (document.visibilityState === 'visible') {
       console.log('[Auto-refresh] Refreshing watcher status...');
       renderWatcherStatus();
     }
-  }, 30 * 1000); // Changed from 5 seconds to 30 seconds
+  }, 120 * 1000); // Changed from 30 seconds to 2 minutes
 }); 
