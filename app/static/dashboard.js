@@ -443,9 +443,12 @@ document.addEventListener('DOMContentLoaded', () => {
       const currentMode = data.notification_mode || 'below_target';
       const description = modeDescriptions[currentMode] || 'Unknown mode';
       
+      console.log('Notification data received:', data); // Debug log
+      console.log('Current mode:', currentMode); // Debug log
+      
       notificationsCurrent.innerHTML = `
         <div><strong>Current mode:</strong> ${description}</div>
-        <div class="mode-info">
+        <div class="mode-info" style="margin-top: 0.5rem; font-size: 0.9rem; color: #6b7280;">
           ${currentMode === 'any_change' ? 'You\'ll get notified of all price movements' : ''}
           ${currentMode === 'below_target' ? 'You\'ll only get target price alerts' : ''}
           ${currentMode === 'both' ? 'You\'ll get all price changes AND target alerts' : ''}
@@ -455,6 +458,7 @@ document.addEventListener('DOMContentLoaded', () => {
       
       document.getElementById('notification-mode').value = currentMode;
     } catch (error) {
+      console.error('Failed to load notification settings:', error); // Debug log
       notificationsCurrent.innerHTML = '<span class="error">Failed to load notification settings</span>';
     }
   }
