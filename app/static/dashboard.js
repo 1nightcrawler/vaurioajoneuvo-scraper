@@ -551,42 +551,97 @@ document.addEventListener('DOMContentLoaded', () => {
   }
 
   async function startWatcher() {
+    console.log('[startWatcher] Starting watcher...');
+    
+    // Prevent multiple simultaneous calls
+    if (startWatcherBtn.disabled) {
+      console.log('[startWatcher] Button already disabled, ignoring click');
+      return;
+    }
+    
     const originalText = startWatcherBtn.textContent;
+    
+    // Disable both buttons immediately to prevent race conditions
     startWatcherBtn.textContent = '⏳ Starting...';
     startWatcherBtn.disabled = true;
+    stopWatcherBtn.disabled = true;
     
     try {
-      await fetchJSON('/api/watcher/start', { method: 'POST' });
-      showNotification('Watcher started successfully!');
-      await renderWatcherStatus();
+      console.log('[startWatcher] Making API call...');
+      const response = await fetchJSON('/api/watcher/start', { method: 'POST' });
+      console.log('[startWatcher] API response:', response);
+      
+      showNotification('✓ Watcher started successfully!');
+      
+      // Wait a moment before checking status to let the watcher initialize
+      setTimeout(async () => {
+        await renderWatcherStatus();
+      }, 1000);
+      
     } catch (error) {
-      showNotification('Failed to start watcher', 'error');
+      console.error('[startWatcher] Error:', error);
+      showNotification(`❌ Failed to start watcher: ${error.message}`, 'error');
+      
+      // Re-enable start button on error
+      startWatcherBtn.disabled = false;
+      stopWatcherBtn.disabled = false;
     } finally {
       startWatcherBtn.textContent = originalText;
-      startWatcherBtn.disabled = false;
     }
   }
 
   async function stopWatcher() {
+    console.log('[stopWatcher] Stopping watcher...');
+    
+    // Prevent multiple simultaneous calls
+    if (stopWatcherBtn.disabled) {
+      console.log('[stopWatcher] Button already disabled, ignoring click');
+      return;
+    }
+    
     const originalText = stopWatcherBtn.textContent;
+    
+    // Disable both buttons immediately to prevent race conditions
     stopWatcherBtn.textContent = '⏳ Stopping...';
     stopWatcherBtn.disabled = true;
+    startWatcherBtn.disabled = true;
     
     try {
-      await fetchJSON('/api/watcher/stop', { method: 'POST' });
-      showNotification('Watcher stopped successfully!');
-      await renderWatcherStatus();
+      console.log('[stopWatcher] Making API call...');
+      const response = await fetchJSON('/api/watcher/stop', { method: 'POST' });
+      console.log('[stopWatcher] API response:', response);
+      
+      showNotification('✓ Watcher stopped successfully!');
+      
+      // Wait a moment before checking status to let the watcher stop
+      setTimeout(async () => {
+        await renderWatcherStatus();
+      }, 1000);
+      
     } catch (error) {
-      showNotification('Failed to stop watcher', 'error');
+      console.error('[stopWatcher] Error:', error);
+      showNotification(`❌ Failed to stop watcher: ${error.message}`, 'error');
+      
+      // Re-enable stop button on error
+      startWatcherBtn.disabled = false;
+      stopWatcherBtn.disabled = false;
     } finally {
       stopWatcherBtn.textContent = originalText;
-      stopWatcherBtn.disabled = false;
     }
   }
 
-  // Event listeners for watcher control
-  startWatcherBtn.onclick = startWatcher;
-  stopWatcherBtn.onclick = stopWatcher;
+  // Event listeners for watcher control with debouncing
+  startWatcherBtn.onclick = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await startWatcher();
+  };
+  
+  stopWatcherBtn.onclick = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    await stopWatcher();
+  };
   
   telegramForm.onsubmit = async e => {
     e.preventDefault();
